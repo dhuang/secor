@@ -32,6 +32,7 @@ import com.pinterest.secor.parser.MessageParser;
 import com.pinterest.secor.parser.TimestampedMessageParser;
 import com.pinterest.secor.util.ReflectionUtil;
 import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClientErrorHandler;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -88,7 +89,16 @@ public class ProgressMonitor {
         if (mConfig.getStatsDHostPort() != null && !mConfig.getStatsDHostPort().isEmpty()) {
             HostAndPort hostPort = HostAndPort.fromString(mConfig.getStatsDHostPort());
             mStatsDClient = new NonBlockingStatsDClient(null, hostPort.getHost(), hostPort.getPort(),
-                    mConfig.getStatsDDogstatsdConstantTags());
+                    mConfig.getStatsDDogstatsdConstantTags(), new LogErrorHandler());
+        }
+    }
+
+    private class LogErrorHandler implements StatsDClientErrorHandler {
+        private final Logger LOG = LoggerFactory.getLogger(LogErrorHandler.class);
+
+        @Override
+        public void handle(final Exception exception) {
+            LOG.warn("Stats warning {}", exception.getMessage());
         }
     }
 
@@ -173,6 +183,7 @@ public class ProgressMonitor {
                 for (Map.Entry<String, String> e : tags.entrySet()) {
                     tagArray[i++] = e.getKey() + ':' + e.getValue();
                 }
+                LOG.info("Push stat with dog tags {}, {}, {}", metricName, value, tagArray);
                 mStatsDClient.recordGaugeValue(metricName, value, tagArray);
             } else {
                 StringBuilder builder = new StringBuilder();
@@ -187,6 +198,7 @@ public class ProgressMonitor {
                         .append(PERIOD)
                         .append(tags.get(Stat.STAT_KEYS.PARTITION.getName()))
                         .toString();
+                LOG.info("Push stat without dog tags {}, {}", metricName, value);
                 mStatsDClient.recordGaugeValue(metricName, value);
             }
         }
