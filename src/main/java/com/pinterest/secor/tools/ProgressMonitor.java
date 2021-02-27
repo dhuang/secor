@@ -98,6 +98,7 @@ public class ProgressMonitor {
                     .port(hostPort.getPort())
                     .errorHandler(new LogErrorHandler())
                     .constantTags(mConfig.getStatsDDogstatsdConstantTags())
+                    .blocking(true)
                     .build();
         }
     }
