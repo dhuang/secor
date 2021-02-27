@@ -32,7 +32,9 @@ import com.pinterest.secor.parser.MessageParser;
 import com.pinterest.secor.parser.TimestampedMessageParser;
 import com.pinterest.secor.util.ReflectionUtil;
 import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
 import com.timgroup.statsd.StatsDClientErrorHandler;
+import com.timgroup.statsd.StatsDClientException;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -45,9 +47,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.SocketAddress;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
 
 /**
  * Progress monitor exports offset lags per topic partition.
@@ -88,8 +93,12 @@ public class ProgressMonitor {
 
         if (mConfig.getStatsDHostPort() != null && !mConfig.getStatsDHostPort().isEmpty()) {
             HostAndPort hostPort = HostAndPort.fromString(mConfig.getStatsDHostPort());
-            mStatsDClient = new NonBlockingStatsDClient(null, hostPort.getHost(), hostPort.getPort(),
-                    mConfig.getStatsDDogstatsdConstantTags(), new LogErrorHandler());
+                mStatsDClient = new NonBlockingStatsDClientBuilder()
+                    .hostname(hostPort.getHost())
+                    .port(hostPort.getPort())
+                    .errorHandler(new LogErrorHandler())
+                    .constantTags(mConfig.getStatsDDogstatsdConstantTags())
+                    .build();
         }
     }
 
